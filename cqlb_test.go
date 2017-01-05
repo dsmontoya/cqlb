@@ -1,4 +1,4 @@
-package cqlm
+package cqlb
 
 import (
 	"fmt"
