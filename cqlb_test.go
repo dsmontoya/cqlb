@@ -9,19 +9,19 @@ import (
 )
 
 type User struct {
-	Test           []*string
-	Name           string `cql:"name"`
-	Password       string `cql:"password"`
-	EmailAddresses []string
+	Test           []*string         `cql:"test"`
+	Name           string            `cql:"name"`
+	Password       string            `cql:"password"`
+	EmailAddresses []string          `cql:"email_address"`
 	Phones         map[string]string `cql:"phones"`
 	Addresses      []*Address        `cql:"addresses"`
 }
 
 type Address struct {
-	Street  string
-	Number  string
-	City    string
-	Country string
+	Street  string `cql:"street"`
+	Number  string `cql:"number"`
+	City    string `cql:"city"`
+	Country string `cql:"country"`
 }
 
 func TestCQLM(t *testing.T) {
@@ -119,8 +119,8 @@ func TestCQLM(t *testing.T) {
 			So(content, ShouldHaveLength, 3)
 		})
 
-		Convey("content should be an array of map[string]interface{}", func() {
-			So(content[0], ShouldHaveSameTypeAs, map[string]interface{}{})
+		Convey("content should be an array of Address", func() {
+			So(content[0], ShouldHaveSameTypeAs, Address{})
 		})
 	})
 
