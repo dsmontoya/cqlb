@@ -42,18 +42,8 @@ func fields(v interface{}) map[string]interface{} {
 func contentOfSlice(v reflect.Value) []interface{} {
 	slice := make([]interface{}, v.Len())
 	for i := 0; i < v.Len(); i++ {
-		f := v.Index(i)
-		if f.Kind().String() != "ptr" && f.Kind().String() != "struct" {
-			slice[i] = f.Interface()
-			continue
-		}
-		elem := f.Elem()
-		if elem.Kind() != reflect.Struct {
-			slice[i] = elem.Interface()
-			continue
-		}
-		nestedFields := fields(f.Interface())
-		slice[i] = nestedFields
+		f := reflect.Indirect(v.Index(i))
+		slice[i] = f.Interface()
 	}
 	return slice
 }
