@@ -10,7 +10,7 @@ import (
 
 type User struct {
 	Test           []*string         `cql:"test"`
-	Name           string            `cql:"name"`
+	Name           string            `cql:"name,omitempty"`
 	Password       string            `cql:"password"`
 	EmailAddresses []string          `cql:"email_address"`
 	Phones         map[string]string `cql:"phones"`

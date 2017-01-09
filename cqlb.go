@@ -1,14 +1,32 @@
 package cqlb
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/gocql/gocql"
 )
 
+type fieldTag struct {
+	Name      string
+	OmitEmpty bool
+}
+
 func compile(v interface{}, cols []gocql.ColumnInfo) error {
+
 	return nil
+}
+
+func tag(f reflect.StructField) *fieldTag {
+	ft := &fieldTag{}
+	tag := f.Tag.Get("cql")
+	opts := strings.Split(tag, ",")
+	ft.Name = opts[0]
+	if len(opts) > 1 && opts[0] == "omitempty" {
+		ft.OmitEmpty = true
+	}
+	return ft
 }
 
 func fields(v interface{}) map[string]interface{} {
@@ -18,18 +36,17 @@ func fields(v interface{}) map[string]interface{} {
 	t := indirect.Type()
 	for i := 0; i < t.NumField(); i++ {
 		var inf interface{}
-		fv := indirect.Field(i)
-		kind := fv.Kind()
-		if kind.String() == "slice" {
-			inf = contentOfSlice(fv)
-		}
 		f := t.Field(i)
-		tag := f.Tag.Get("cql")
-		if inf == nil {
-			inf = indirect.Field(i).Interface()
+		fv := indirect.Field(i)
+		tag := tag(f)
+		fmt.Println(tag)
+		if fv.IsValid() == false && tag.OmitEmpty == true {
+			continue
 		}
-		if tag != "" {
-			result[tag] = inf
+		fvIndirect := reflect.Indirect(fv)
+		inf = fvIndirect.Interface()
+		if tag.Name != "" {
+			result[tag.Name] = inf
 		} else {
 			//fmt.Println(f.Name, indirect.Field(f.Index[0]))
 			result[strings.ToLower(f.Name)] = inf
