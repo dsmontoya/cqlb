@@ -1,7 +1,6 @@
 package cqlb
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 
@@ -11,6 +10,21 @@ import (
 type fieldTag struct {
 	Name      string
 	OmitEmpty bool
+}
+
+type Session struct{}
+
+func SetSession(*gocql.Session) *Session {
+	return &Session{}
+}
+
+func (s *Session) Insert(v interface{}) {
+	f := fields(v)
+	insertQuery(f)
+}
+
+func insertQuery(f map[string][]interface{}) string {
+	return ""
 }
 
 func compile(v interface{}, cols []gocql.ColumnInfo) error {
@@ -29,8 +43,10 @@ func tag(f reflect.StructField) *fieldTag {
 	return ft
 }
 
-func fields(v interface{}) map[string]interface{} {
-	result := map[string]interface{}{}
+func fields(v interface{}) map[string][]interface{} {
+	var names []interface{}
+	var values []interface{}
+	result := make(map[string][]interface{}, 2)
 	value := reflect.ValueOf(v)
 	indirect := reflect.Indirect(value)
 	t := indirect.Type()
@@ -39,20 +55,20 @@ func fields(v interface{}) map[string]interface{} {
 		f := t.Field(i)
 		fv := indirect.Field(i)
 		tag := tag(f)
-		fmt.Println(tag)
 		if fv.IsValid() == false && tag.OmitEmpty == true {
 			continue
 		}
 		fvIndirect := reflect.Indirect(fv)
 		inf = fvIndirect.Interface()
 		if tag.Name != "" {
-			result[tag.Name] = inf
+			names = append(names, tag.Name)
 		} else {
-			//fmt.Println(f.Name, indirect.Field(f.Index[0]))
-			result[strings.ToLower(f.Name)] = inf
-			//b.fieldMap[strings.ToLower(f.Name)] = f.Index
+			names = append(names, strings.ToLower(f.Name))
 		}
+		values = append(values, inf)
 	}
+	result["names"] = names
+	result["values"] = values
 	return result
 }
 
