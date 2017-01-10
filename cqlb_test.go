@@ -67,6 +67,19 @@ func TestCQLM(t *testing.T) {
 			Convey("The names should be equal 'name,password,email_addresses,phones,addresses'", func() {
 				So(f["names"], ShouldEqual, "name,password,email_addresses,phones,addresses")
 			})
+
+			Convey("The insert query", func() {
+				query := insertQuery(f)
+				fmt.Println(query)
+
+				Convey("should contain the fields", func() {
+					So(query, ShouldEqual, fmt.Sprintf(insertQueryTemplate, f["table_name"], f["names"], f["slots"]))
+				})
+
+				Convey("should end with ;", func() {
+					So(query, ShouldEndWith, ";")
+				})
+			})
 		})
 	})
 
