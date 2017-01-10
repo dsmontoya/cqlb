@@ -1,10 +1,12 @@
 package cqlb
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
 	"github.com/gocql/gocql"
+	"github.com/jinzhu/inflection"
 )
 
 type fieldTag struct {
@@ -12,19 +14,23 @@ type fieldTag struct {
 	OmitEmpty bool
 }
 
-type Session struct{}
-
-func SetSession(*gocql.Session) *Session {
-	return &Session{}
+type Session struct {
+	*gocql.Session
 }
 
-func (s *Session) Insert(v interface{}) {
+func SetSession(s *gocql.Session) *Session {
+	return &Session{s}
+}
+
+func (s *Session) Insert(v interface{}) error {
 	f := fields(v)
-	insertQuery(f)
+	stmt := insertQuery(f)
+	return s.Query(stmt, f["values"]).Exec()
 }
 
-func insertQuery(f map[string][]interface{}) string {
-	return ""
+func insertQuery(f map[string]interface{}) string {
+	query := fmt.Sprintf("insert into %s (%s) values(%s)", f["table_name"], f["names"], f["slots"])
+	return query
 }
 
 func compile(v interface{}, cols []gocql.ColumnInfo) error {
@@ -43,13 +49,15 @@ func tag(f reflect.StructField) *fieldTag {
 	return ft
 }
 
-func fields(v interface{}) map[string][]interface{} {
-	var names []interface{}
+func fields(v interface{}) map[string]interface{} {
+	var names string
+	var slots string
 	var values []interface{}
-	result := make(map[string][]interface{}, 2)
+	result := make(map[string]interface{})
 	value := reflect.ValueOf(v)
 	indirect := reflect.Indirect(value)
 	t := indirect.Type()
+	result["table_name"] = inflection.Plural(strings.ToLower(t.Name()))
 	for i := 0; i < t.NumField(); i++ {
 		var inf interface{}
 		f := t.Field(i)
@@ -60,15 +68,21 @@ func fields(v interface{}) map[string][]interface{} {
 		}
 		fvIndirect := reflect.Indirect(fv)
 		inf = fvIndirect.Interface()
-		if tag.Name != "" {
-			names = append(names, tag.Name)
-		} else {
-			names = append(names, strings.ToLower(f.Name))
+		if i != 0 {
+			names += ","
+			slots += ","
 		}
+		if tag.Name != "" {
+			names += tag.Name
+		} else {
+			names += strings.ToLower(f.Name)
+		}
+		slots += "?"
 		values = append(values, inf)
 	}
 	result["names"] = names
 	result["values"] = values
+	result["slots"] = slots
 	return result
 }
 

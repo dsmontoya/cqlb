@@ -9,10 +9,9 @@ import (
 )
 
 type User struct {
-	Test           []*string         `cql:"test"`
 	Name           string            `cql:"name,omitempty"`
 	Password       string            `cql:"password"`
-	EmailAddresses []string          `cql:"email_address"`
+	EmailAddresses []string          `cql:"email_addresses"`
 	Phones         map[string]string `cql:"phones"`
 	Addresses      []*Address        `cql:"addresses"`
 }
@@ -26,9 +25,7 @@ type Address struct {
 
 func TestCQLM(t *testing.T) {
 	Convey("Given a user", t, func() {
-		str := "lol"
 		user := &User{
-			Test:     []*string{&str},
 			Name:     "Jhon",
 			Password: "super-secret-password",
 			EmailAddresses: []string{
@@ -58,6 +55,18 @@ func TestCQLM(t *testing.T) {
 		Convey("When the model is compiled", func() {
 			f := fields(user)
 			fmt.Println("fields", f)
+
+			Convey("The table name should be users", func() {
+				So(f["table_name"], ShouldEqual, "users")
+			})
+
+			Convey("The slots should be equal to '?,?,?,?,?'", func() {
+				So(f["slots"], ShouldEqual, "?,?,?,?,?")
+			})
+
+			Convey("The names should be equal 'name,password,email_addresses,phones,addresses'", func() {
+				So(f["names"], ShouldEqual, "name,password,email_addresses,phones,addresses")
+			})
 		})
 	})
 
