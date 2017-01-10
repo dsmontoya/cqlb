@@ -9,6 +9,10 @@ import (
 	"github.com/jinzhu/inflection"
 )
 
+const (
+	insertQueryTemplate = "insert into %s (%s) values(%s);"
+)
+
 type fieldTag struct {
 	Name      string
 	OmitEmpty bool
@@ -29,7 +33,7 @@ func (s *Session) Insert(v interface{}) error {
 }
 
 func insertQuery(f map[string]interface{}) string {
-	query := fmt.Sprintf("insert into %s (%s) values(%s)", f["table_name"], f["names"], f["slots"])
+	query := fmt.Sprintf(insertQueryTemplate, f["table_name"], f["names"], f["slots"])
 	return query
 }
 
