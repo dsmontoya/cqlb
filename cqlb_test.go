@@ -24,6 +24,27 @@ type Address struct {
 }
 
 func TestCQLM(t *testing.T) {
+	Convey("Given a session", t, func() {
+		s := &Session{}
+		Convey("When the session is cloned", func() {
+			ns := s.clone()
+			Convey("And a model is set to the new session", func() {
+				ns.Model(&User{})
+
+				Convey("The table name should be empty", func() {
+					So(ns.tableName, ShouldBeBlank)
+				})
+			})
+		})
+
+		Convey("When a User is set", func() {
+			ns := s.Model(&User{})
+			Convey("The table name should be 'users'", func() {
+				So(ns.tableName, ShouldEqual, "users")
+			})
+		})
+	})
+
 	Convey("Given a user", t, func() {
 		user := &User{
 			Name:     "Jhon",

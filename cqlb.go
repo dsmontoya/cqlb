@@ -19,17 +19,43 @@ type fieldTag struct {
 }
 
 type Session struct {
-	*gocql.Session
+	s         *gocql.Session
+	query     interface{}
+	args      []interface{}
+	value     reflect.Value
+	tableName string
 }
 
 func SetSession(s *gocql.Session) *Session {
-	return &Session{s}
+	return &Session{s: s}
 }
 
 func (s *Session) Insert(v interface{}) error {
 	f := fields(v)
 	stmt := insertQuery(f)
-	return s.Query(stmt, f["values"]).Exec()
+	return s.s.Query(stmt, f["values"]).Exec()
+}
+
+func (s *Session) Where(query interface{}, args ...interface{}) *Session {
+	ns := s.clone()
+	ns.query = query
+	ns.args = args
+	return ns
+}
+
+func (s *Session) Model(v interface{}) *Session {
+	ns := s.clone()
+	value := reflect.ValueOf(v)
+	indirect := reflect.Indirect(value)
+	t := indirect.Type()
+	ns.value = value
+	ns.tableName = inflection.Plural(strings.ToLower(t.Name()))
+	return ns
+}
+
+func (s *Session) clone() *Session {
+	ns := *s
+	return &ns
 }
 
 func insertQuery(f map[string]interface{}) string {
