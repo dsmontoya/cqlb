@@ -1,10 +1,30 @@
+// CREATE KEYSPACE test WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', 'dc1' : 1, 'datacenter1': 1 };
+//
+// CREATE TYPE address (
+// 	street TEXT,
+// 	number TEXT,
+// 	city TEXT,
+// 	country TEXT
+// );
+//
+// CREATE TABLE users (
+// 	name TEXT,
+// 	password TEXT,
+// 	email_addresses list<TEXT>,
+// 	phones map<TEXT, TEXT>,
+// 	addresses list<frozen <address>>,
+// 	PRIMARY KEY (name)
+// );
+
 package cqlb
 
 import (
 	"fmt"
+	"os"
 	"reflect"
 	"testing"
 
+	"github.com/gocql/gocql"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
@@ -25,7 +45,11 @@ type Address struct {
 
 func TestCQLM(t *testing.T) {
 	Convey("Given a session", t, func() {
-		s := &Session{}
+		cluster := gocql.NewCluster(os.Getenv("CASSANDRA_HOST"))
+		cluster.Keyspace = "test"
+		cluster.Consistency = gocql.Any
+		session, _ := cluster.CreateSession()
+		s := SetSession(session)
 		Convey("When the session is cloned", func() {
 			ns := s.clone()
 			Convey("And a model is set to the new session", func() {
@@ -41,6 +65,17 @@ func TestCQLM(t *testing.T) {
 			ns := s.Model(&User{})
 			Convey("The table name should be 'users'", func() {
 				So(ns.tableName, ShouldEqual, "users")
+			})
+		})
+
+		Convey("Given a User", func() {
+			user := &User{}
+			Convey("When it is inserted", func() {
+				err := s.Insert(user)
+
+				Convey("err should be nil", func() {
+					So(err, ShouldBeNil)
+				})
 			})
 		})
 	})

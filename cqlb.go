@@ -34,7 +34,7 @@ func SetSession(s *gocql.Session) *Session {
 func (s *Session) Insert(v interface{}) error {
 	f := fields(v)
 	stmt := insertQuery(f)
-	return s.s.Query(stmt, f["values"]).Exec()
+	return s.s.Query(stmt, f["values"].([]interface{})...).Exec()
 }
 
 func (s *Session) Where(query interface{}, args ...interface{}) *Session {
