@@ -22,6 +22,7 @@ type Session struct {
 	s         *gocql.Session
 	query     interface{}
 	args      []interface{}
+	limit     int
 	value     reflect.Value
 	tableName string
 }
@@ -41,6 +42,12 @@ func (s *Session) Where(query interface{}, args ...interface{}) *Session {
 	ns.query = query
 	ns.args = args
 	return ns
+}
+
+func (s *Session) Limit(limit int) *Session {
+	c := s.clone()
+	c.limit = limit
+	return c
 }
 
 func (s *Session) Model(v interface{}) *Session {
