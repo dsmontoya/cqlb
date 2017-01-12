@@ -30,10 +30,10 @@ import (
 
 type User struct {
 	Name           string            `cql:"name,omitempty"`
-	Password       string            `cql:"password"`
-	EmailAddresses []string          `cql:"email_addresses"`
-	Phones         map[string]string `cql:"phones"`
-	Addresses      []*Address        `cql:"addresses"`
+	Password       string            `cql:"password,omitempty"`
+	EmailAddresses []string          `cql:"email_addresses,omitempty"`
+	Phones         map[string]string `cql:"phones,omitempty"`
+	Addresses      []*Address        `cql:"addresses,omitempty"`
 }
 
 type Address struct {
@@ -69,7 +69,7 @@ func TestCQLM(t *testing.T) {
 		})
 
 		Convey("Given a User", func() {
-			user := &User{}
+			user := &User{Name: "jhon", Password: "lol"}
 			Convey("When it is inserted", func() {
 				err := s.Insert(user)
 
@@ -84,28 +84,6 @@ func TestCQLM(t *testing.T) {
 		user := &User{
 			Name:     "Jhon",
 			Password: "super-secret-password",
-			EmailAddresses: []string{
-				"me@jhon.me",
-				"jhon@gmail.com",
-			},
-			Phones: map[string]string{
-				"Home": "12345",
-				"Work": "54321",
-			},
-			Addresses: []*Address{
-				&Address{
-					Street:  "London Street",
-					Number:  "501",
-					City:    "LA",
-					Country: "USA",
-				},
-				&Address{
-					Street:  "Reforma",
-					Number:  "222",
-					City:    "Mexico City",
-					Country: "Mexico",
-				},
-			},
 		}
 
 		Convey("When the model is compiled", func() {
@@ -116,12 +94,12 @@ func TestCQLM(t *testing.T) {
 				So(f["table_name"], ShouldEqual, "users")
 			})
 
-			Convey("The slots should be equal to '?,?,?,?,?'", func() {
-				So(f["slots"], ShouldEqual, "?,?,?,?,?")
+			Convey("The slots should be equal to '?,?'", func() {
+				So(f["slots"], ShouldEqual, "?,?")
 			})
 
-			Convey("The names should be equal 'name,password,email_addresses,phones,addresses'", func() {
-				So(f["names"], ShouldEqual, "name,password,email_addresses,phones,addresses")
+			Convey("The names should be equal 'name,password'", func() {
+				So(f["names"], ShouldEqual, "name,password")
 			})
 
 			Convey("The insert query", func() {
@@ -202,4 +180,32 @@ func TestCQLM(t *testing.T) {
 		})
 	})
 
+}
+
+func TestIsZero(t *testing.T) {
+	Convey("Integer:", t, func() {
+		Convey("0 should be zero", func() {
+			So(isZero(0), ShouldBeTrue)
+		})
+		Convey("1 should not be zero", func() {
+			So(isZero(1), ShouldBeFalse)
+		})
+	})
+	Convey("String:", t, func() {
+		Convey("'' should be zero", func() {
+			So(isZero(""), ShouldBeTrue)
+		})
+		Convey("'string' should not be zero", func() {
+			So(isZero("string"), ShouldBeFalse)
+		})
+	})
+	Convey("Map:", t, func() {
+		user := &User{}
+		Convey("an empty map should be zero", func() {
+			So(isZero(user.Phones), ShouldBeTrue)
+		})
+		Convey("a non empty map should not be zero", func() {
+			So(isZero(map[string]string{"key": "value"}), ShouldBeFalse)
+		})
+	})
 }

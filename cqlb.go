@@ -80,7 +80,7 @@ func tag(f reflect.StructField) *fieldTag {
 	tag := f.Tag.Get("cql")
 	opts := strings.Split(tag, ",")
 	ft.Name = opts[0]
-	if len(opts) > 1 && opts[0] == "omitempty" {
+	if len(opts) > 1 && opts[1] == "omitempty" {
 		ft.OmitEmpty = true
 	}
 	return ft
@@ -100,11 +100,12 @@ func fields(v interface{}) map[string]interface{} {
 		f := t.Field(i)
 		fv := indirect.Field(i)
 		tag := tag(f)
-		if fv.IsValid() == false && tag.OmitEmpty == true {
-			continue
-		}
 		fvIndirect := reflect.Indirect(fv)
 		inf = fvIndirect.Interface()
+		isZero := isZero(inf)
+		if isZero == true && tag.OmitEmpty == true {
+			continue
+		}
 		if i != 0 {
 			names += ","
 			slots += ","
@@ -121,6 +122,10 @@ func fields(v interface{}) map[string]interface{} {
 	result["values"] = values
 	result["slots"] = slots
 	return result
+}
+
+func isZero(x interface{}) bool {
+	return reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
 }
 
 func contentOfSlice(v reflect.Value) []interface{} {
