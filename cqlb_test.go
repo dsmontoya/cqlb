@@ -10,6 +10,8 @@
 // CREATE TABLE users (
 // 	name TEXT,
 // 	password TEXT,
+// 	age INT,
+// 	sex TINYINT,
 // 	email_addresses list<TEXT>,
 // 	phones map<TEXT, TEXT>,
 // 	addresses list<frozen <address>>,
@@ -31,6 +33,8 @@ import (
 type User struct {
 	Name           string            `cql:"name,omitempty"`
 	Password       string            `cql:"password,omitempty"`
+	Age            int               `cql:"age,omitempty"`
+	Sex            int8              `cql:"sex,omitempty"`
 	EmailAddresses []string          `cql:"email_addresses,omitempty"`
 	Phones         map[string]string `cql:"phones,omitempty"`
 	Addresses      []*Address        `cql:"addresses,omitempty"`
