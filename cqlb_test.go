@@ -65,13 +65,6 @@ func TestCQLM(t *testing.T) {
 			})
 		})
 
-		Convey("When a User is set", func() {
-			ns := s.Model(&User{})
-			Convey("The table name should be 'users'", func() {
-				So(ns.tableName, ShouldEqual, "users")
-			})
-		})
-
 		Convey("Given a User", func() {
 			user := &User{Name: "jhon", Password: "lol"}
 			Convey("When it is inserted", func() {
@@ -79,6 +72,13 @@ func TestCQLM(t *testing.T) {
 
 				Convey("err should be nil", func() {
 					So(err, ShouldBeNil)
+				})
+			})
+
+			Convey("When it is set as model", func() {
+				ns := s.Model(user)
+				Convey("The table name should be 'users'", func() {
+					So(ns.tableName, ShouldEqual, "users")
 				})
 			})
 		})
