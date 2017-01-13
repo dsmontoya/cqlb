@@ -34,27 +34,31 @@ func SetSession(s *gocql.Session) *Session {
 	return &Session{s: s}
 }
 
-func (s *Session) Find(value interface{}) error {
-	var fields map[string]interface{}
-	var fieldsToScan []interface{}
-	v := reflect.ValueOf(value)
-	indirect := reflect.Indirect(v)
-	s.setModel(v)
-	query := s.query
-	vq := reflect.ValueOf(query)
-	kindQuery := vq.Kind()
-	switch kindQuery {
-	case reflect.Map:
-		fields = whereFieldsFromMap(query)
-	}
-	values := fields["values"].([]interface{})
-	iter := s.s.Query(s.whereQuery(fields), values).Iter()
-	names := f["names"].([]string)
-	for i := 0; i < len(names); i++ {
-		name := names[i]
-		field := v.FieldByName(name)
-		fieldsToScan = append(fieldsToScan, field.Interface())
-	}
+func (s *Session) Find(slice interface{}) error {
+	// var fields map[string]interface{}
+	// var fieldsToScan []interface{}
+	// value := reflect.ValueOf(slice)
+	// k := value.Kind()
+	// if k != reflect.Slice {
+	// 	return errors.New("value should be a slice.")
+	// }
+	// v := value.Index(0)
+	// indirect := reflect.Indirect(v)
+	// s.setModel(v)
+	// query := s.query
+	// vq := reflect.ValueOf(query)
+	// kindQuery := vq.Kind()
+	// switch kindQuery {
+	// case reflect.Map:
+	// 	fields = whereFieldsFromMap(query)
+	// }
+	// iter := s.s.Query(s.whereQuery(fields), values).Iter()
+	// cols := iter.Columns()
+	// values := make([]interface{}, len(cols))
+	// names := f["names"].([]string)
+	// for i, col := range cols {
+	// 	values[i] = f["strategies"].(map[string]interface{})[col.Name]
+	// }
 	return nil
 }
 
@@ -149,6 +153,7 @@ func fields(v interface{}) map[string]interface{} {
 	var names string
 	var slots string
 	var values []interface{}
+	var strategies map[string]interface{}
 	result := make(map[string]interface{})
 	value := reflect.ValueOf(v)
 	indirect := reflect.Indirect(value)
@@ -156,6 +161,7 @@ func fields(v interface{}) map[string]interface{} {
 	result["table_name"] = inflection.Plural(strings.ToLower(t.Name()))
 	for i := 0; i < t.NumField(); i++ {
 		var inf interface{}
+		var tagName string
 		f := t.Field(i)
 		fv := indirect.Field(i)
 		tag := tag(f)
@@ -170,11 +176,13 @@ func fields(v interface{}) map[string]interface{} {
 			slots += ","
 		}
 		if tag.Name != "" {
-			names += tag.Name
+			tagName = tag.Name
 		} else {
-			names += strings.ToLower(f.Name)
+			tagName = strings.ToLower(f.Name)
 		}
+		names += tagName
 		slots += "?"
+		strategies[tagName] = inf
 		values = append(values, inf)
 	}
 	result["names"] = names
