@@ -11,6 +11,7 @@ import (
 
 const (
 	insertQueryTemplate = "insert into %s (%s) values(%s);"
+	whereQueryTemplate  = "select %s from %s where %s %s %s;"
 )
 
 type fieldTag struct {
@@ -22,13 +23,39 @@ type Session struct {
 	s         *gocql.Session
 	query     interface{}
 	args      []interface{}
+	sel       []string
 	limit     int
 	value     reflect.Value
+	indirect  reflect.Value
 	tableName string
 }
 
 func SetSession(s *gocql.Session) *Session {
 	return &Session{s: s}
+}
+
+func (s *Session) Find(value interface{}) error {
+	var fields map[string]interface{}
+	var fieldsToScan []interface{}
+	v := reflect.ValueOf(value)
+	indirect := reflect.Indirect(v)
+	s.setModel(v)
+	query := s.query
+	vq := reflect.ValueOf(query)
+	kindQuery := vq.Kind()
+	switch kindQuery {
+	case reflect.Map:
+		fields = whereFieldsFromMap(query)
+	}
+	values := fields["values"].([]interface{})
+	iter := s.s.Query(s.whereQuery(fields), values).Iter()
+	names := f["names"].([]string)
+	for i := 0; i < len(names); i++ {
+		name := names[i]
+		field := v.FieldByName(name)
+		fieldsToScan = append(fieldsToScan, field.Interface())
+	}
+	return nil
 }
 
 func (s *Session) Insert(v interface{}) error {
@@ -50,19 +77,51 @@ func (s *Session) Limit(limit int) *Session {
 	return c
 }
 
-func (s *Session) Model(v interface{}) *Session {
+func (s *Session) Model(value interface{}) *Session {
+	v := reflect.ValueOf(value)
 	ns := s.clone()
-	value := reflect.ValueOf(v)
-	indirect := reflect.Indirect(value)
-	t := indirect.Type()
-	ns.value = value
-	ns.tableName = inflection.Plural(strings.ToLower(t.Name()))
+	ns.setModel(v)
 	return ns
+}
+
+func (s *Session) Select(sel ...string) *Session {
+	c := s.clone()
+	c.sel = sel
+	return c
+}
+
+func (s *Session) limitString() string {
+	if limit := s.limit; limit > 0 {
+		return fmt.Sprintf("LIMIT %v", limit)
+	}
+	return ""
+}
+
+func (s *Session) selectString() string {
+	if sel := s.sel; len(sel) > 0 {
+		return strings.Join(sel, ",")
+	}
+	return "*"
+}
+
+func (s *Session) setModel(v reflect.Value) {
+	indirect := reflect.Indirect(v)
+	t := indirect.Type()
+	s.value = v
+	s.indirect = indirect
+	s.tableName = inflection.Plural(strings.ToLower(t.Name()))
 }
 
 func (s *Session) clone() *Session {
 	ns := *s
 	return &ns
+}
+
+func (s *Session) whereQuery(f map[string]interface{}) string {
+	sel := s.selectString()
+	limit := s.limitString()
+	query := fmt.Sprintf(whereQueryTemplate, sel, s.tableName, f["conditions"], limit, "")
+	return query
 }
 
 func insertQuery(f map[string]interface{}) string {
@@ -121,6 +180,30 @@ func fields(v interface{}) map[string]interface{} {
 	result["names"] = names
 	result["values"] = values
 	result["slots"] = slots
+	return result
+}
+
+func whereFieldsFromMap(value interface{}) map[string]interface{} {
+	var conditions string
+	var values []interface{}
+	var names []string
+	result := make(map[string]interface{})
+	v := reflect.ValueOf(value)
+	keys := v.MapKeys()
+	for i := 0; i < len(keys); i++ {
+		key := keys[i]
+		keyString := key.String()
+		value := v.MapIndex(key)
+		if i != 0 {
+			conditions += " AND "
+		}
+		conditions += fmt.Sprintf("%s = ?", keyString)
+		names = append(names, keyString)
+		values = append(values, value)
+	}
+	result["conditions"] = conditions
+	result["values"] = values
+	result["names"] = names
 	return result
 }
 
