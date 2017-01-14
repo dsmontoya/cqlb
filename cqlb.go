@@ -171,7 +171,7 @@ func fields(v interface{}) map[string]interface{} {
 	var names string
 	var slots string
 	var values []interface{}
-	var strategies map[string]interface{}
+	strategies := make(map[string]interface{})
 	result := make(map[string]interface{})
 	value := reflect.ValueOf(v)
 	indirect := reflect.Indirect(value)
