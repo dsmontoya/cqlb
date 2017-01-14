@@ -73,6 +73,12 @@ func TestCQLM(t *testing.T) {
 				Convey("err should be nil", func() {
 					So(err, ShouldBeNil)
 				})
+
+				Convey("The new user should exist", func() {
+					u := &User{}
+					s.Where(map[string]interface{}{"name": "jhon"}).Scan(u)
+					So(user.Name, ShouldNotBeEmpty)
+				})
 			})
 
 			Convey("When it is set as model", func() {
