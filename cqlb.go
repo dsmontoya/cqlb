@@ -21,18 +21,25 @@ type fieldTag struct {
 }
 
 type Session struct {
-	s         *gocql.Session
-	query     interface{}
-	args      []interface{}
-	sel       []string
-	limit     int
-	value     reflect.Value
-	indirect  reflect.Value
-	tableName string
+	s           *gocql.Session
+	query       interface{}
+	args        []interface{}
+	sel         []string
+	limit       int
+	consistency gocql.Consistency
+	value       reflect.Value
+	indirect    reflect.Value
+	tableName   string
 }
 
 func SetSession(s *gocql.Session) *Session {
 	return &Session{s: s}
+}
+
+func (s *Session) Consistency(consistency gocql.Consistency) *Session {
+	c := s.clone()
+	c.consistency = consistency
+	return c
 }
 
 func (s *Session) Find(slice interface{}) error {
@@ -102,6 +109,9 @@ func (s *Session) Scan(value interface{}) bool {
 	}
 	values := fields["values"].([]interface{})
 	q := s.s.Query(s.whereQuery(fields), values...)
+	if consistency := s.consistency; consistency > 0 {
+		q = q.Consistency(consistency)
+	}
 	b := cqlr.BindQuery(q)
 	return b.Scan(value)
 }
@@ -109,6 +119,12 @@ func (s *Session) Scan(value interface{}) bool {
 func (s *Session) Select(sel ...string) *Session {
 	c := s.clone()
 	c.sel = sel
+	return c
+}
+
+func (s *Session) Table(name string) *Session {
+	c := s.clone()
+	c.tableName = name
 	return c
 }
 
@@ -131,7 +147,9 @@ func (s *Session) setModel(v reflect.Value) {
 	t := indirect.Type()
 	s.value = v
 	s.indirect = indirect
-	s.tableName = inflection.Plural(strings.ToLower(t.Name()))
+	if s.tableName == "" {
+		s.tableName = inflection.Plural(strings.ToLower(t.Name()))
+	}
 }
 
 func (s *Session) clone() *Session {
