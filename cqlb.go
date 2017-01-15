@@ -101,7 +101,7 @@ func (s *Session) Scan(value interface{}) bool {
 		fields = whereFieldsFromMap(query)
 	}
 	values := fields["values"].([]interface{})
-	q := s.s.Query(s.whereQuery(fields), values)
+	q := s.s.Query(s.whereQuery(fields), values...)
 	b := cqlr.BindQuery(q)
 	return b.Scan(value)
 }
@@ -219,7 +219,7 @@ func whereFieldsFromMap(value interface{}) map[string]interface{} {
 	for i := 0; i < len(keys); i++ {
 		key := keys[i]
 		keyString := key.String()
-		value := v.MapIndex(key)
+		value := v.MapIndex(key).Interface()
 		if i != 0 {
 			conditions += " AND "
 		}
