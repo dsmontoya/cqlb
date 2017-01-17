@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/gocql/gocql"
 	"github.com/jinzhu/inflection"
@@ -73,7 +74,28 @@ func (s *Session) Find(slice interface{}) error {
 func (s *Session) Insert(v interface{}) error {
 	f := fields(v)
 	stmt := insertQuery(f)
+	fmt.Println("fields", f)
 	return s.s.Query(stmt, f["values"].([]interface{})...).Exec()
+}
+
+func (s *Session) Iter(value interface{}) *gocql.Iter {
+	c := s.clone()
+	var fields map[string]interface{}
+	v := reflect.ValueOf(value)
+	c.setModel(v)
+	query := c.query
+	vq := reflect.ValueOf(query)
+	kindQuery := vq.Kind()
+	switch kindQuery {
+	case reflect.Map:
+		fields = whereFieldsFromMap(query)
+	}
+	values := fields["values"].([]interface{})
+	q := c.s.Query(c.whereQuery(fields), values...)
+	if consistency := c.consistency; consistency > 0 {
+		q = q.Consistency(consistency)
+	}
+	return q.Iter()
 }
 
 func (s *Session) Where(query interface{}, args ...interface{}) *Session {
@@ -189,6 +211,7 @@ func fields(v interface{}) map[string]interface{} {
 	var names string
 	var slots string
 	var values []interface{}
+	t1 := time.Now()
 	strategies := make(map[string]interface{})
 	result := make(map[string]interface{})
 	value := reflect.ValueOf(v)
@@ -202,6 +225,9 @@ func fields(v interface{}) map[string]interface{} {
 		fv := indirect.Field(i)
 		tag := tag(f)
 		fvIndirect := reflect.Indirect(fv)
+		if fvIndirect.IsValid() == false {
+			continue
+		}
 		inf = fvIndirect.Interface()
 		isZero := isZero(inf)
 		if isZero == true && tag.OmitEmpty == true {
@@ -224,6 +250,7 @@ func fields(v interface{}) map[string]interface{} {
 	result["names"] = names
 	result["values"] = values
 	result["slots"] = slots
+	fmt.Println("duration cqlb", time.Since(t1))
 	return result
 }
 
@@ -231,6 +258,7 @@ func whereFieldsFromMap(value interface{}) map[string]interface{} {
 	var conditions string
 	var values []interface{}
 	var names []string
+	t1 := time.Now()
 	result := make(map[string]interface{})
 	v := reflect.ValueOf(value)
 	keys := v.MapKeys()
@@ -248,6 +276,7 @@ func whereFieldsFromMap(value interface{}) map[string]interface{} {
 	result["conditions"] = conditions
 	result["values"] = values
 	result["names"] = names
+	fmt.Println("duration whereFieldsFromMap", time.Since(t1))
 	return result
 }
 

@@ -37,7 +37,7 @@ type User struct {
 	Sex            int8              `cql:"sex,omitempty"`
 	EmailAddresses []string          `cql:"email_addresses,omitempty"`
 	Phones         map[string]string `cql:"phones,omitempty"`
-	Addresses      []*Address        `cql:"addresses,omitempty"`
+	Addresses      []Address         `cql:"addresses,omitempty"`
 }
 
 type Address struct {
@@ -52,7 +52,8 @@ func TestCQLM(t *testing.T) {
 		cluster := gocql.NewCluster(os.Getenv("CASSANDRA_HOST"))
 		cluster.Keyspace = "test"
 		cluster.Consistency = gocql.Any
-		session, _ := cluster.CreateSession()
+		session, err := cluster.CreateSession()
+		fmt.Println(err, os.Getenv("CASSANDRA_HOST"))
 		s := SetSession(session)
 		Convey("When the session is cloned", func() {
 			ns := s.clone()
@@ -94,6 +95,11 @@ func TestCQLM(t *testing.T) {
 		user := &User{
 			Name:     "Jhon",
 			Password: "super-secret-password",
+			Addresses: []Address{
+				Address{
+					Street: "London",
+				},
+			},
 		}
 
 		Convey("When the model is compiled", func() {
