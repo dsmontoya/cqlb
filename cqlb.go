@@ -13,7 +13,7 @@ import (
 
 const (
 	insertQueryTemplate = "insert into %s (%s) values(%s);"
-	whereQueryTemplate  = "select %s from %s where %s %s %s;"
+	whereQueryTemplate  = "select %s from %s %s %s %s;"
 )
 
 type fieldTag struct {
@@ -180,9 +180,13 @@ func (s *Session) clone() *Session {
 }
 
 func (s *Session) whereQuery(f map[string]interface{}) string {
+	var conditionsString string
 	sel := s.selectString()
 	limit := s.limitString()
-	query := fmt.Sprintf(whereQueryTemplate, sel, s.tableName, f["conditions"], limit, "")
+	if conditions := f["conditions"].(string); conditions != "" {
+		conditionsString = fmt.Sprintf("WHERE %v", conditions)
+	}
+	query := fmt.Sprintf(whereQueryTemplate, sel, s.tableName, conditionsString, limit, "")
 	return query
 }
 
