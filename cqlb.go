@@ -22,19 +22,26 @@ type fieldTag struct {
 }
 
 type Session struct {
-	s           *gocql.Session
-	query       interface{}
-	args        []interface{}
-	sel         []string
-	limit       int
-	consistency gocql.Consistency
-	value       reflect.Value
-	indirect    reflect.Value
-	tableName   string
+	s              *gocql.Session
+	query          interface{}
+	args           []interface{}
+	sel            []string
+	limit          int
+	allowFiltering bool
+	consistency    gocql.Consistency
+	value          reflect.Value
+	indirect       reflect.Value
+	tableName      string
 }
 
 func SetSession(s *gocql.Session) *Session {
 	return &Session{s: s}
+}
+
+func (s *Session) AllowFiltering(b bool) *Session {
+	c := s.clone()
+	c.allowFiltering = b
+	return c
 }
 
 func (s *Session) Consistency(consistency gocql.Consistency) *Session {
@@ -150,6 +157,13 @@ func (s *Session) Table(name string) *Session {
 	return c
 }
 
+func (s *Session) allowFilteringString() string {
+	if s.allowFiltering == true {
+		return "ALLOW FILTERING"
+	}
+	return ""
+}
+
 func (s *Session) limitString() string {
 	if limit := s.limit; limit > 0 {
 		return fmt.Sprintf("LIMIT %v", limit)
@@ -183,10 +197,11 @@ func (s *Session) whereQuery(f map[string]interface{}) string {
 	var conditionsString string
 	sel := s.selectString()
 	limit := s.limitString()
+	allowFiltering := s.allowFilteringString()
 	if conditions := f["conditions"].(string); conditions != "" {
 		conditionsString = fmt.Sprintf("WHERE %v", conditions)
 	}
-	query := fmt.Sprintf(whereQueryTemplate, sel, s.tableName, conditionsString, limit, "")
+	query := fmt.Sprintf(whereQueryTemplate, sel, s.tableName, conditionsString, limit, allowFiltering)
 	return query
 }
 
