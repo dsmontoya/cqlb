@@ -1,4 +1,4 @@
-// CREATE KEYSPACE test WITH REPLICATION = { 'class' : 'NetworkTopologyStrategy', 'dc1' : 1, 'datacenter1': 1 };
+// CREATE KEYSPACE test WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
 //
 // CREATE TYPE address (
 // 	street TEXT,
@@ -110,12 +110,12 @@ func TestCQLM(t *testing.T) {
 				So(f["table_name"], ShouldEqual, "users")
 			})
 
-			Convey("The slots should be equal to '?,?'", func() {
-				So(f["slots"], ShouldEqual, "?,?")
+			Convey("The slots should be equal to '?,?,?'", func() {
+				So(f["slots"], ShouldEqual, "?,?,?")
 			})
 
-			Convey("The names should be equal 'name,password'", func() {
-				So(f["names"], ShouldEqual, "name,password")
+			Convey("The names should be equal 'name,password,addresses'", func() {
+				So(f["names"], ShouldEqual, "name,password,addresses")
 			})
 
 			Convey("The insert query", func() {
