@@ -1,23 +1,3 @@
-// CREATE KEYSPACE test WITH REPLICATION = { 'class' : 'SimpleStrategy', 'replication_factor' : 1 };
-//
-// CREATE TYPE address (
-// 	street TEXT,
-// 	number TEXT,
-// 	city TEXT,
-// 	country TEXT
-// );
-//
-// CREATE TABLE users (
-// 	name TEXT,
-// 	password TEXT,
-// 	age INT,
-// 	sex TINYINT,
-// 	email_addresses list<TEXT>,
-// 	phones map<TEXT, TEXT>,
-// 	addresses list<frozen <address>>,
-// 	PRIMARY KEY (name)
-// );
-
 package cqlb
 
 import (
