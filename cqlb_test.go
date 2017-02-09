@@ -25,19 +25,21 @@ import (
 	"os"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/gocql/gocql"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
 type User struct {
-	Name           string            `cql:"name,omitempty"`
-	Password       string            `cql:"password,omitempty"`
-	Age            int               `cql:"age,omitempty"`
-	Sex            int8              `cql:"sex,omitempty"`
-	EmailAddresses []string          `cql:"email_addresses,omitempty"`
-	Phones         map[string]string `cql:"phones,omitempty"`
-	Addresses      []Address         `cql:"addresses,omitempty"`
+	Name           string            `cql:"name"`
+	Password       string            `cql:"password"`
+	Age            int               `cql:"age"`
+	Sex            int8              `cql:"sex"`
+	EmailAddresses []string          `cql:"email_addresses"`
+	Phones         map[string]string `cql:"phones"`
+	Addresses      []Address         `cql:"addresses"`
+	LastSeen       time.Time         `cql:"last_seen"`
 }
 
 type Address struct {
@@ -52,8 +54,7 @@ func TestCQLM(t *testing.T) {
 		cluster := gocql.NewCluster(os.Getenv("CASSANDRA_HOST"))
 		cluster.Keyspace = "test"
 		cluster.Consistency = gocql.Any
-		session, err := cluster.CreateSession()
-		fmt.Println(err, os.Getenv("CASSANDRA_HOST"))
+		session, _ := cluster.CreateSession()
 		s := SetSession(session)
 		Convey("When the session is cloned", func() {
 			ns := s.clone()
@@ -76,9 +77,13 @@ func TestCQLM(t *testing.T) {
 				})
 
 				Convey("The new user should exist", func() {
-					u := &User{}
-					s.Where(map[string]interface{}{"name": "jhon"}).Scan(u)
-					So(user.Name, ShouldNotBeEmpty)
+					var name string
+					var users []*User
+					iter := s.Select("name").Where(map[string]interface{}{"name": "jhon"}).Consistency(gocql.LocalOne).Iter(&User{})
+					for iter.Scan(&name) {
+						users = append(users, &User{Name: name})
+					}
+					So(users, ShouldHaveLength, 1)
 				})
 			})
 
@@ -86,6 +91,27 @@ func TestCQLM(t *testing.T) {
 				ns := s.Model(user)
 				Convey("The table name should be 'users'", func() {
 					So(ns.tableName, ShouldEqual, "users")
+				})
+			})
+		})
+
+		Convey("Given a User which was last seen now", func() {
+			user := &User{Name: "jhon", Password: "lol", LastSeen: time.Now()}
+			Convey("When it is inserted", func() {
+				err := s.Insert(user)
+
+				Convey("err should be nil", func() {
+					So(err, ShouldBeNil)
+				})
+
+				Convey("Given a near range of date", func() {
+					var name string
+					var users []*User
+					iter := s.Select("name").Where(GTE("last_seen", user.LastSeen), LT("last_seen", time.Now())).AllowFiltering(true).Consistency(gocql.LocalOne).Iter(&User{})
+					for iter.Scan(&name) {
+						users = append(users, &User{Name: name})
+					}
+					So(users, ShouldHaveLength, 1)
 				})
 			})
 		})
@@ -110,12 +136,12 @@ func TestCQLM(t *testing.T) {
 				So(f["table_name"], ShouldEqual, "users")
 			})
 
-			Convey("The slots should be equal to '?,?,?'", func() {
-				So(f["slots"], ShouldEqual, "?,?,?")
+			Convey("The slots should be equal to '?,?,?,?,?,?,?,?'", func() {
+				So(f["slots"], ShouldEqual, "?,?,?,?,?,?,?,?")
 			})
 
-			Convey("The names should be equal 'name,password,addresses'", func() {
-				So(f["names"], ShouldEqual, "name,password,addresses")
+			Convey("The names should be equal 'name,password,age,sex,email_addresses,phones,addresses,last_seen'", func() {
+				So(f["names"], ShouldEqual, "name,password,age,sex,email_addresses,phones,addresses,last_seen")
 			})
 
 			Convey("The insert query", func() {
