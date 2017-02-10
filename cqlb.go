@@ -102,6 +102,7 @@ func (s *Session) Iter(value interface{}) *gocql.Iter {
 	}
 	values := fields["values"].([]interface{})
 	wQuery := c.whereQuery(fields)
+	fmt.Printf("[%s] %s\n", time.Now(), wQuery)
 	q := c.s.Query(wQuery, values...)
 	if consistency := c.consistency; consistency > 0 {
 		q = q.Consistency(consistency)
@@ -109,10 +110,13 @@ func (s *Session) Iter(value interface{}) *gocql.Iter {
 	return q.Iter()
 }
 
-func (s *Session) Where(query interface{}, args ...interface{}) *Session {
+func (s *Session) Where(args ...interface{}) *Session {
 	ns := s.clone()
-	ns.query = query
-	ns.args = args
+	if len(args) <= 0 {
+		return ns
+	}
+	ns.query = args[0]
+	ns.args = args[1:len(args)]
 	return ns
 }
 
