@@ -91,24 +91,32 @@ func (s *Session) Iter(value interface{}) *gocql.Iter {
 	v := reflect.ValueOf(value)
 	c.setModel(v)
 	query := c.query
+	args := c.args
 	vq := reflect.ValueOf(query)
 	kindQuery := vq.Kind()
 	switch kindQuery {
 	case reflect.Map:
 		fields = whereFieldsFromMap(query)
+	case reflect.Struct:
+		fields = whereFieldsFromCondList(query, args)
 	}
 	values := fields["values"].([]interface{})
-	q := c.s.Query(c.whereQuery(fields), values...)
+	wQuery := c.whereQuery(fields)
+	fmt.Printf("[%s] %s\n", time.Now(), wQuery)
+	q := c.s.Query(wQuery, values...)
 	if consistency := c.consistency; consistency > 0 {
 		q = q.Consistency(consistency)
 	}
 	return q.Iter()
 }
 
-func (s *Session) Where(query interface{}, args ...interface{}) *Session {
+func (s *Session) Where(args ...interface{}) *Session {
 	ns := s.clone()
-	ns.query = query
-	ns.args = args
+	if len(args) <= 0 {
+		return ns
+	}
+	ns.query = args[0]
+	ns.args = args[1:len(args)]
 	return ns
 }
 
@@ -230,7 +238,6 @@ func fields(v interface{}) map[string]interface{} {
 	var names string
 	var slots string
 	var values []interface{}
-	t1 := time.Now()
 	strategies := make(map[string]interface{})
 	result := make(map[string]interface{})
 	value := reflect.ValueOf(v)
@@ -269,8 +276,13 @@ func fields(v interface{}) map[string]interface{} {
 	result["names"] = names
 	result["values"] = values
 	result["slots"] = slots
-	fmt.Println("duration cqlb", time.Since(t1))
 	return result
+}
+
+func operatorForValue(value reflect.Value) string {
+	kind := value.Kind().String()
+	fmt.Println(kind)
+	return ""
 }
 
 func whereFieldsFromMap(value interface{}) map[string]interface{} {
@@ -284,18 +296,40 @@ func whereFieldsFromMap(value interface{}) map[string]interface{} {
 	for i := 0; i < len(keys); i++ {
 		key := keys[i]
 		keyString := key.String()
-		value := v.MapIndex(key).Interface()
+		value := v.MapIndex(key)
+		inf := value.Interface()
 		if i != 0 {
 			conditions += " AND "
 		}
 		conditions += fmt.Sprintf("%s = ?", keyString)
 		names = append(names, keyString)
-		values = append(values, value)
+		values = append(values, inf)
 	}
 	result["conditions"] = conditions
 	result["values"] = values
 	result["names"] = names
 	fmt.Println("duration whereFieldsFromMap", time.Since(t1))
+	return result
+}
+
+func whereFieldsFromCondList(query interface{}, args []interface{}) map[string]interface{} {
+	var conditions string
+	var values []interface{}
+	var names []string
+	result := make(map[string]interface{})
+	condList := append(args, query)
+	for i := 0; i < len(condList); i++ {
+		condition := condList[i].(Condition)
+		if i != 0 {
+			conditions += " AND "
+		}
+		conditions += condition.String()
+		names = append(names, condition.key)
+		values = append(values, condition.values...)
+	}
+	result["conditions"] = conditions
+	result["values"] = values
+	result["names"] = names
 	return result
 }
 
