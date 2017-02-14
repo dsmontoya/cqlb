@@ -133,6 +133,14 @@ func (s *Session) Model(value interface{}) *Session {
 	return ns
 }
 
+func (s *Session) PageSize(n int) {
+	s.s.SetPageSize(n)
+}
+
+func (s *Session) Prefetch(p float64) {
+	s.s.SetPrefetch(p)
+}
+
 func (s *Session) Scan(value interface{}) bool {
 	var fields map[string]interface{}
 	v := reflect.ValueOf(value)
@@ -155,13 +163,24 @@ func (s *Session) Scan(value interface{}) bool {
 
 func (s *Session) Select(sel ...string) *Session {
 	c := s.clone()
-	c.sel = sel
+	c.sel = append(c.sel, sel...)
 	return c
 }
 
 func (s *Session) Table(name string) *Session {
 	c := s.clone()
 	c.tableName = name
+	return c
+}
+
+func (s *Session) Token(sel ...string) *Session {
+	c := s.clone()
+	var tokenFields []string
+	for i := 0; i < len(sel); i++ {
+		s := sel[i]
+		tokenFields = append(sel, fmt.Sprintf("token(%s)", s))
+	}
+	c.sel = append(c.sel, tokenFields...)
 	return c
 }
 
