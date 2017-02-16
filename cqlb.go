@@ -110,16 +110,6 @@ func (s *Session) Iter(value interface{}) *gocql.Iter {
 	return q.Iter()
 }
 
-func (s *Session) Where(args ...interface{}) *Session {
-	ns := s.clone()
-	if len(args) <= 0 {
-		return ns
-	}
-	ns.query = args[0]
-	ns.args = args[1:len(args)]
-	return ns
-}
-
 func (s *Session) Limit(limit int) *Session {
 	c := s.clone()
 	c.limit = limit
@@ -184,11 +174,26 @@ func (s *Session) Token(sel ...string) *Session {
 	return c
 }
 
+func (s *Session) Where(args ...interface{}) *Session {
+	ns := s.clone()
+	if len(args) <= 0 {
+		return ns
+	}
+	ns.query = args[0]
+	ns.args = args[1:len(args)]
+	return ns
+}
+
 func (s *Session) allowFilteringString() string {
 	if s.allowFiltering == true {
 		return "ALLOW FILTERING"
 	}
 	return ""
+}
+
+func (s *Session) clone() *Session {
+	ns := *s
+	return &ns
 }
 
 func (s *Session) limitString() string {
@@ -215,11 +220,6 @@ func (s *Session) setModel(v reflect.Value) {
 	}
 }
 
-func (s *Session) clone() *Session {
-	ns := *s
-	return &ns
-}
-
 func (s *Session) whereQuery(f map[string]interface{}) string {
 	var conditionsString string
 	sel := s.selectString()
@@ -232,25 +232,17 @@ func (s *Session) whereQuery(f map[string]interface{}) string {
 	return query
 }
 
-func insertQuery(f map[string]interface{}) string {
-	query := fmt.Sprintf(insertQueryTemplate, f["table_name"], f["names"], f["slots"])
-	return query
-}
-
 func compile(v interface{}, cols []gocql.ColumnInfo) error {
-
 	return nil
 }
 
-func tag(f reflect.StructField) *fieldTag {
-	ft := &fieldTag{}
-	tag := f.Tag.Get("cql")
-	opts := strings.Split(tag, ",")
-	ft.Name = opts[0]
-	if len(opts) > 1 && opts[1] == "omitempty" {
-		ft.OmitEmpty = true
+func contentOfSlice(v reflect.Value) []interface{} {
+	slice := make([]interface{}, v.Len())
+	for i := 0; i < v.Len(); i++ {
+		f := reflect.Indirect(v.Index(i))
+		slice[i] = f.Interface()
 	}
-	return ft
+	return slice
 }
 
 func fields(v interface{}) map[string]interface{} {
@@ -298,10 +290,51 @@ func fields(v interface{}) map[string]interface{} {
 	return result
 }
 
+func insertQuery(f map[string]interface{}) string {
+	query := fmt.Sprintf(insertQueryTemplate, f["table_name"], f["names"], f["slots"])
+	return query
+}
+
+func isZero(x interface{}) bool {
+	return reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
+}
+
+func tag(f reflect.StructField) *fieldTag {
+	ft := &fieldTag{}
+	tag := f.Tag.Get("cql")
+	opts := strings.Split(tag, ",")
+	ft.Name = opts[0]
+	if len(opts) > 1 && opts[1] == "omitempty" {
+		ft.OmitEmpty = true
+	}
+	return ft
+}
+
 func operatorForValue(value reflect.Value) string {
 	kind := value.Kind().String()
 	fmt.Println(kind)
 	return ""
+}
+
+func whereFieldsFromCondList(query interface{}, args []interface{}) map[string]interface{} {
+	var conditions string
+	var values []interface{}
+	var names []string
+	result := make(map[string]interface{})
+	condList := append(args, query)
+	for i := 0; i < len(condList); i++ {
+		condition := condList[i].(Condition)
+		if i != 0 {
+			conditions += " AND "
+		}
+		conditions += condition.String()
+		names = append(names, condition.key)
+		values = append(values, condition.values...)
+	}
+	result["conditions"] = conditions
+	result["values"] = values
+	result["names"] = names
+	return result
 }
 
 func whereFieldsFromMap(value interface{}) map[string]interface{} {
@@ -329,42 +362,4 @@ func whereFieldsFromMap(value interface{}) map[string]interface{} {
 	result["names"] = names
 	fmt.Println("duration whereFieldsFromMap", time.Since(t1))
 	return result
-}
-
-func whereFieldsFromCondList(query interface{}, args []interface{}) map[string]interface{} {
-	var conditions string
-	var values []interface{}
-	var names []string
-	result := make(map[string]interface{})
-	condList := append(args, query)
-	for i := 0; i < len(condList); i++ {
-		condition := condList[i].(Condition)
-		if i != 0 {
-			conditions += " AND "
-		}
-		conditions += condition.String()
-		names = append(names, condition.key)
-		values = append(values, condition.values...)
-	}
-	result["conditions"] = conditions
-	result["values"] = values
-	result["names"] = names
-	return result
-}
-
-func isZero(x interface{}) bool {
-	return reflect.DeepEqual(x, reflect.Zero(reflect.TypeOf(x)).Interface())
-}
-
-func contentOfSlice(v reflect.Value) []interface{} {
-	slice := make([]interface{}, v.Len())
-	for i := 0; i < v.Len(); i++ {
-		f := reflect.Indirect(v.Index(i))
-		slice[i] = f.Interface()
-	}
-	return slice
-}
-
-func getType(v interface{}) {
-
 }
