@@ -32,6 +32,8 @@ type Session struct {
 	value          reflect.Value
 	indirect       reflect.Value
 	tableName      string
+	pageSize       int
+	prefetch       float64
 }
 
 func SetSession(s *gocql.Session) *Session {
@@ -107,6 +109,10 @@ func (s *Session) Iter(value interface{}) *gocql.Iter {
 	if consistency := c.consistency; consistency > 0 {
 		q = q.Consistency(consistency)
 	}
+	q = q.PageSize(c.pageSize)
+	if prefetch := c.prefetch; prefetch > 0 {
+		q.Prefetch(prefetch)
+	}
 	return q.Iter()
 }
 
@@ -123,12 +129,16 @@ func (s *Session) Model(value interface{}) *Session {
 	return ns
 }
 
-func (s *Session) PageSize(n int) {
-	s.s.SetPageSize(n)
+func (s *Session) PageSize(n int) *Session {
+	c := s.clone()
+	c.pageSize = n
+	return c
 }
 
-func (s *Session) Prefetch(p float64) {
-	s.s.SetPrefetch(p)
+func (s *Session) Prefetch(p float64) *Session {
+	c := s.clone()
+	c.prefetch = p
+	return c
 }
 
 func (s *Session) Scan(value interface{}) bool {
