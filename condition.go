@@ -30,7 +30,8 @@ func GTE(key string, value interface{}) Condition {
 }
 
 func In(key string, values ...interface{}) Condition {
-	return setCondition(in, key, values)
+	values = values[0].([]interface{})
+	return setCondition(in, key, values...)
 }
 
 func LT(key string, value interface{}) Condition {
@@ -67,6 +68,7 @@ func (c *Condition) String() string {
 
 func inOpSlots(values []interface{}) string {
 	var s string
+	//l := len(values[0].([]interface{}))
 	l := len(values)
 	for i := 0; i < l; i++ {
 		s += "?"

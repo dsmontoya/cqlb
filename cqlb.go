@@ -537,12 +537,14 @@ func whereFieldsFromCondList(query interface{}, args []interface{}) map[string]i
 			conditions += " AND "
 		}
 		conditions += condition.String()
+
 		names = append(names, condition.key)
 		values = append(values, condition.values...)
 	}
 	result["conditions"] = conditions
 	result["values"] = values
 	result["names"] = names
+
 	return result
 }
 
