@@ -7,9 +7,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gocql/gocql"
+	"github.com/entropyx/gocql"
 	"github.com/jinzhu/inflection"
-	"github.com/relops/cqlr"
 )
 
 const (
@@ -173,25 +172,25 @@ func (s *Session) Prefetch(p float64) *Session {
 	return c
 }
 
-func (s *Session) Scan(value interface{}) bool {
-	var fields map[string]interface{}
-	v := reflect.ValueOf(value)
-	s.setModel(v)
-	query := s.query
-	vq := reflect.ValueOf(query)
-	kindQuery := vq.Kind()
-	switch kindQuery {
-	case reflect.Map:
-		fields = whereFieldsFromMap(query)
-	}
-	values := fields["values"].([]interface{})
-	q := s.s.Query(s.whereQuery(fields), values...)
-	if consistency := s.consistency; consistency > 0 {
-		q = q.Consistency(consistency)
-	}
-	b := cqlr.BindQuery(q)
-	return b.Scan(value)
-}
+// func (s *Session) Scan(value interface{}) bool {
+// 	var fields map[string]interface{}
+// 	v := reflect.ValueOf(value)
+// 	s.setModel(v)
+// 	query := s.query
+// 	vq := reflect.ValueOf(query)
+// 	kindQuery := vq.Kind()
+// 	switch kindQuery {
+// 	case reflect.Map:
+// 		fields = whereFieldsFromMap(query)
+// 	}
+// 	values := fields["values"].([]interface{})
+// 	q := s.s.Query(s.whereQuery(fields), values...)
+// 	if consistency := s.consistency; consistency > 0 {
+// 		q = q.Consistency(consistency)
+// 	}
+// 	b := cqlr.BindQuery(q)
+// 	return b.Scan(value)
+// }
 
 func (s *Session) Select(sel ...string) *Session {
 	c := s.clone()
