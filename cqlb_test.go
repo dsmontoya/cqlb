@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gocql/gocql"
+	"github.com/entropyx/gocql"
 	. "github.com/smartystreets/goconvey/convey"
 )
 
