@@ -43,6 +43,10 @@ func SetSession(s *gocql.Session) *Session {
 	return &Session{s: s}
 }
 
+func (s *Session) ExecQuery(stmt string) error {
+	return s.s.Query(stmt).Exec()
+}
+
 func (s *Session) AllowFiltering(b bool) *Session {
 	c := s.clone()
 	c.allowFiltering = b
